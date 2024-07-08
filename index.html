@@ -127,6 +127,36 @@
          * and vertical scrolling for the last column. HTML tags within the content are rendered
          * properly, allowing for rich text formatting and embedded elements like links and images.
          */
+
+        // Function to load and parse CSV using Papa Parse
+    const loadCSV = () => {
+        return new Promise((resolve, reject) => {
+            Papa.parse('./data-import/data.csv', {
+                download: true,
+                complete: function(results) {
+                    const data = results.data;
+                    const hierarchy = processData(data);
+                    resolve(hierarchy); // Resolve the Promise with processed data
+                },
+                error: function(err, file, inputElem, reason) {
+                    reject(reason); // Reject Promise if there's an error
+                }
+            });
+        });
+    };
+
+    // Function to initialize the application after CSV is loaded
+    const initializeApp = async () => {
+        try {
+            const hierarchy = await loadCSV(); // Wait for CSV to load
+            populateColumn(hierarchy, 'column1'); // Populate columns with loaded data
+        } catch (error) {
+            console.error('Error loading CSV:', error);
+        }
+    };
+
+    // Execute initialization when DOM content is fully loaded
+    document.addEventListener('DOMContentLoaded', initializeApp);
     
         
        // Process the CSV data into a hierarchical structure
