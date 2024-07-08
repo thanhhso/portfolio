@@ -271,7 +271,7 @@ const container = document.querySelector('.container');
 container.addEventListener('wheel', transformScroll, { passive: false });
 
 // Parse the CSV file and initialize the columns
-Papa.parse('/data-import/data.csv', {
+Papa.parse('./data-import/data.csv', {
     download: true,
     complete: function(results) {
         const data = results.data;
