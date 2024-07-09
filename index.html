@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>sirmulyte.com</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,8 +12,19 @@
 
         @media (max-width: 1000px) {
                 body {
-                    font-size: 3.5vh !important;
+                    font-size: 3vh !important;
                 }
+                
+                .column:last-child {
+                    width: 95vw !important;
+                    padding-right: 1vh !important;
+                }
+
+                .column:first-child {
+                    padding-left: 1vh !important;
+                }
+
+
             }
 
         .inter-tight-sirmulyte {
@@ -36,7 +48,7 @@
         }
 
         a {
-            color:cadetblue;
+            color:#BB9E9A;
             pointer-events: visible;
         }
 
@@ -105,6 +117,33 @@
             pointer-events: none;
         }
 
+        @keyframes fadeInLine {
+            from { opacity: 0; transform: translateY(0px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in-line {
+            display: block;
+            opacity: 0;
+        }
+
+        .fade-in-line.active {
+            animation: fadeInLine 1s ease-out forwards;
+        }
+
+        ::selection {
+            color: #BB9E9A;
+            background: #E0DFAF;
+        }
+
+        .center {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 4em;
+            margin-bottom: 4em;
+            width: 66%;
+        }
       
     </style>
 </head>
@@ -128,7 +167,7 @@
          * properly, allowing for rich text formatting and embedded elements like links and images.
          */
 
-        // Function to load and parse CSV using Papa Parse
+         // Function to load and parse CSV using Papa Parse
     const loadCSV = () => {
         return new Promise((resolve, reject) => {
             Papa.parse('./data-import/data.csv', {
@@ -160,7 +199,7 @@
     
         
        // Process the CSV data into a hierarchical structure
-const processData = (data) => {
+    const processData = (data) => {
     let hierarchy = {};
 
     data.forEach(row => {
@@ -213,64 +252,113 @@ const resetStyles = () => {
     });
 };
 
-// Animate clickable items in a column
+// Animate clickable items in a column one by one
 const animateClickableItems = (column) => {
     const clickableItems = column.querySelectorAll('li.clickable');
-    clickableItems.forEach(item => {
-        item.classList.add('black-regular');
+    clickableItems.forEach((item, index) => {
         setTimeout(() => {
-            item.classList.remove('black-regular');
-        }, 1000); // Animate for 1 second
+            item.classList.add('black-regular');
+            setTimeout(() => {
+                item.classList.remove('black-regular');
+            }, 1000); // Animate for 1 second
+        }, index * 200); // Delay each item by 200ms (adjust as needed)
     });
 };
 
-// Populate a column with items
-const populateColumn = (data, columnId, parentItem = {}) => {
-    const column = document.querySelector(`#${columnId}`);
-    column.innerHTML = '';
+// Function to split text into lines based on a maximum character count
+const splitIntoLines = (text, maxChars = 50) => {
+            const words = text.split(' ');
+            let lines = [];
+            let currentLine = '';
 
-    Object.keys(data).forEach((item) => {
-        if (!item) return;
-
-        let listItem = document.createElement("li");
-        
-        // Use innerHTML to properly render HTML tags
-        listItem.innerHTML = item;
-
-        Object.keys(parentItem).forEach(key => {
-            listItem.dataset[key] = parentItem[key];
-        });
-
-        let tierLevel = columnId.charAt(columnId.length - 1);
-        listItem.dataset[`tier${tierLevel}`] = item;
-
-        const hasNestedItems = Object.keys(data[item]).length !== 0;
-
-        if (hasNestedItems) {
-            listItem.classList.add('clickable', 'grey-regular');
-            listItem.addEventListener("click", function(){
-                resetStyles();
-                highlightRabbitHole(columnId, listItem);
-                let nextColumnId = `column${parseInt(tierLevel) + 1}`;
-                populateColumn(data[item], nextColumnId, listItem.dataset);
-                for (let i = parseInt(tierLevel) + 2; i <= 4; i++) {
-                    document.querySelector(`#column${i}`).innerHTML = '';
+            words.forEach(word => {
+                if ((currentLine + word).length > maxChars) {
+                    if (currentLine) lines.push(currentLine.trim());
+                    currentLine = word + ' ';
+                } else {
+                    currentLine += word + ' ';
                 }
             });
-        } else {
-            listItem.classList.add('grey-regular', 'no-hover');
-        }
 
-        if (columnId === 'column4') {
-            listItem.classList.add('black-regular', 'no-hover');
-        }
+            if (currentLine) lines.push(currentLine.trim());
 
-        column.appendChild(listItem);
-    });
+            return lines;
+        };
 
-    // Animate clickable items after populating the column
-    animateClickableItems(column);
-};
+        // Function to wrap lines in spans
+        const wrapLinesInSpans = (text) => {
+            const lines = splitIntoLines(text);
+            return lines.map(line => `<span class="fade-in-line">${line}</span>`).join('');
+        };
+
+        // Function to animate lines
+        const animateLines = (element) => {
+            const lines = element.querySelectorAll('.fade-in-line');
+            lines.forEach((line, index) => {
+                setTimeout(() => {
+                    line.classList.add('active');
+                }, index * 100); // Adjust timing as needed
+            });
+        };
+
+        // Modify the populateColumn function
+        const populateColumn = (data, columnId, parentItem = {}) => {
+            const column = document.querySelector(`#${columnId}`);
+            column.innerHTML = '';
+
+            Object.keys(data).forEach((item, index) => {
+                if (!item) return;
+
+                let listItem = document.createElement("li");
+                
+                // For the last column, wrap lines in spans
+                if (columnId === 'column4') {
+                    listItem.innerHTML = wrapLinesInSpans(item);
+                } else {
+                    listItem.innerHTML = item;
+                }
+
+                Object.keys(parentItem).forEach(key => {
+                    listItem.dataset[key] = parentItem[key];
+                });
+
+                let tierLevel = columnId.charAt(columnId.length - 1);
+                listItem.dataset[`tier${tierLevel}`] = item;
+
+                const hasNestedItems = Object.keys(data[item]).length !== 0;
+
+                if (hasNestedItems) {
+                    listItem.classList.add('clickable', 'grey-regular');
+                    listItem.addEventListener("click", function(){
+                        resetStyles();
+                        highlightRabbitHole(columnId, listItem);
+                        let nextColumnId = `column${parseInt(tierLevel) + 1}`;
+                        populateColumn(data[item], nextColumnId, listItem.dataset);
+                        for (let i = parseInt(tierLevel) + 2; i <= 4; i++) {
+                            document.querySelector(`#column${i}`).innerHTML = '';
+                        }
+                    });
+                } else {
+                    listItem.classList.add('grey-regular', 'no-hover');
+                }
+
+                if (columnId === 'column4') {
+                    listItem.classList.add('black-regular', 'no-hover');
+                }
+
+                column.appendChild(listItem);
+
+                // Animate lines for the last column
+                if (columnId === 'column4') {
+                    animateLines(listItem);
+                }
+            });
+
+            // Animate clickable items for other columns
+            if (columnId !== 'column4') {
+                animateClickableItems(column);
+            }
+        };
 
 // Handle horizontal scrolling
 function transformScroll(event) {
@@ -301,7 +389,7 @@ const container = document.querySelector('.container');
 container.addEventListener('wheel', transformScroll, { passive: false });
 
 // Parse the CSV file and initialize the columns
-Papa.parse('./data-import/data.csv', {
+Papa.parse('/data-import/data.csv', {
     download: true,
     complete: function(results) {
         const data = results.data;
