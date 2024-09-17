@@ -151,6 +151,141 @@
         }
       
     </style>
+    <script>
+        // Preload resources before showing the content
+        const preloadResources = () => {
+            return new Promise((resolve, reject) => {
+                // Load CSV first
+                Papa.parse('./data-import/data.csv', {
+                    download: true,
+                    complete: function(results) {
+                        if (results && results.errors.length > 0) {
+                            reject('Error parsing CSV: ' + results.errors[0].message); // Handle parse errors
+                            return;
+                        }
+
+                        if (!results.data || results.data.length === 0) {
+                            reject('CSV data is empty or not found.'); // Handle empty or invalid data
+                            return;
+                        }
+
+                        resolve(results.data); // CSV is loaded and parsed
+                    },
+                    error: function(err, file, inputElem, reason) {
+                        reject('Failed to load CSV: ' + reason); // Handle network errors (e.g., 404)
+                    }
+                });
+            });
+        };
+
+        const startApp = async () => {
+            try {
+                // Fetch and validate CSV
+                const data = await preloadResources();
+
+                // Process data only after it's successfully fetched
+                const hierarchy = processData(data);
+                populateColumn(hierarchy, 'column1');
+
+                // Show body once resources are loaded
+                document.body.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading resources:', error);
+                alert('There was a problem loading the resources. Please try again later.');
+            }
+        };
+
+        // Wait for DOM content to be fully loaded
+        document.addEventListener('DOMContentLoaded', startApp);
+
+        // Function to process CSV data into a hierarchy (as before)
+        const processData = (data) => {
+            let hierarchy = {};
+
+            data.forEach(row => {
+                if (!Array.isArray(row)) return; // Ensure row is an array
+
+                const [tier1, tier2, tier3, tier4] = row; // Safely destructure row
+
+                // Treat "empty" or "-" as truly empty
+                const isEmpty = (value) => !value || value === "---";
+
+                if (!isEmpty(tier1)) {
+                    if (!hierarchy[tier1]) hierarchy[tier1] = {};
+                    if (!isEmpty(tier2)) {
+                        if (!hierarchy[tier1][tier2]) hierarchy[tier1][tier2] = {};
+                        if (!isEmpty(tier3)) {
+                            if (!hierarchy[tier1][tier2][tier3]) hierarchy[tier1][tier2][tier3] = {};
+                            if (!isEmpty(tier4)) {
+                                hierarchy[tier1][tier2][tier3][tier4] = {};
+                            }
+                        }
+                    }
+                }
+            });
+
+            return hierarchy;
+        };
+
+        // Function to populate the columns (as before)
+        const populateColumn = (data, columnId, parentItem = {}) => {
+            const column = document.querySelector(`#${columnId}`);
+            column.innerHTML = '';
+
+            Object.keys(data).forEach((item, index) => {
+                if (!item) return;
+
+                let listItem = document.createElement("li");
+                
+                // For the last column, wrap lines in spans
+                if (columnId === 'column4') {
+                    listItem.innerHTML = wrapLinesInSpans(item);
+                } else {
+                    listItem.innerHTML = item;
+                }
+
+                Object.keys(parentItem).forEach(key => {
+                    listItem.dataset[key] = parentItem[key];
+                });
+
+                let tierLevel = columnId.charAt(columnId.length - 1);
+                listItem.dataset[`tier${tierLevel}`] = item;
+
+                const hasNestedItems = Object.keys(data[item]).length !== 0;
+
+                if (hasNestedItems) {
+                    listItem.classList.add('clickable', 'grey-regular');
+                    listItem.addEventListener("click", function(){
+                        resetStyles();
+                        highlightRabbitHole(columnId, listItem);
+                        let nextColumnId = `column${parseInt(tierLevel) + 1}`;
+                        populateColumn(data[item], nextColumnId, listItem.dataset);
+                        for (let i = parseInt(tierLevel) + 2; i <= 4; i++) {
+                            document.querySelector(`#column${i}`).innerHTML = '';
+                        }
+                    });
+                } else {
+                    listItem.classList.add('grey-regular', 'no-hover');
+                }
+
+                if (columnId === 'column4') {
+                    listItem.classList.add('black-regular', 'no-hover');
+                    listItem.innerHTML = item;
+                }
+
+                column.appendChild(listItem);
+
+                if (columnId === 'column4') {
+                    animateLines(listItem);
+                }
+            });
+
+            if (columnId !== 'column4') {
+                animateClickableItems(column);
+            }
+        };
+    </script>
 </head>
 <body>
     <div class="container">
