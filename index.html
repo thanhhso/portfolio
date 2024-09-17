@@ -485,67 +485,6 @@ document.addEventListener('DOMContentLoaded', initializeApp);
             });
         };
 
-       // Modify the populateColumn function
-       const populateColumn = (data, columnId, parentItem = {}) => {
-            const column = document.querySelector(`#${columnId}`);
-            column.innerHTML = '';
-
-            Object.keys(data).forEach((item, index) => {
-                if (!item) return;
-
-                let listItem = document.createElement("li");
-                
-                // For the last column, wrap lines in spans
-                if (columnId === 'column4') {
-                    listItem.innerHTML = wrapLinesInSpans(item);
-                } else {
-                    listItem.innerHTML = item;
-                }
-
-                Object.keys(parentItem).forEach(key => {
-                    listItem.dataset[key] = parentItem[key];
-                });
-
-                let tierLevel = columnId.charAt(columnId.length - 1);
-                listItem.dataset[`tier${tierLevel}`] = item;
-
-                const hasNestedItems = Object.keys(data[item]).length !== 0;
-
-                if (hasNestedItems) {
-                    listItem.classList.add('clickable', 'grey-regular');
-                    listItem.addEventListener("click", function(){
-                        resetStyles();
-                        highlightRabbitHole(columnId, listItem);
-                        let nextColumnId = `column${parseInt(tierLevel) + 1}`;
-                        populateColumn(data[item], nextColumnId, listItem.dataset);
-                        for (let i = parseInt(tierLevel) + 2; i <= 4; i++) {
-                            document.querySelector(`#column${i}`).innerHTML = '';
-                        }
-                    });
-                } else {
-                    listItem.classList.add('grey-regular', 'no-hover');
-                }
-
-                if (columnId === 'column4') {
-                    listItem.classList.add('black-regular', 'no-hover');
-                    // Directly set innerHTML for the last column to render HTML
-                    listItem.innerHTML = item;
-                }
-
-                column.appendChild(listItem);
-
-                // Animate lines for the last column
-                if (columnId === 'column4') {
-                    animateLines(listItem);
-                }
-            });
-
-            // Animate clickable items for other columns
-            if (columnId !== 'column4') {
-                animateClickableItems(column);
-            }
-        };
-
         // Handle horizontal scrolling
         function transformScroll(event) {
             if (!event.deltaY) {
