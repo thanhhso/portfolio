@@ -144,6 +144,11 @@
             margin-bottom: 4em;
             width: 66%;
         }
+
+        .html-content img {
+            max-width: 100%;
+            height: auto;
+        }
       
     </style>
 </head>
@@ -167,43 +172,76 @@
          * properly, allowing for rich text formatting and embedded elements like links and images.
          */
 
-         // Function to load and parse CSV using Papa Parse
-    const loadCSV = () => {
-        return new Promise((resolve, reject) => {
-            Papa.parse('./data-import/data.csv', {
-                download: true,
-                complete: function(results) {
-                    const data = results.data;
-                    const hierarchy = processData(data);
-                    resolve(hierarchy); // Resolve the Promise with processed data
-                },
-                error: function(err, file, inputElem, reason) {
-                    reject(reason); // Reject Promise if there's an error
-                }
-            });
+         function parseCSVWithHTML(csvText) {
+    const rows = csvText.split('\n').map(row => {
+        // Use a regex to split by commas, ignoring commas within quotes
+        return row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
+    });
+    const headers = rows[0] || [];
+    const data = rows.slice(1);
+
+    return data.map(row => {
+        const item = {};
+        headers.forEach((header, index) => {
+            const cellContent = row[index] || ''; // Safely handle null or undefined row[index]
+            item[header.trim()] = processHTMLContent(cellContent);
         });
-    };
+        return item;
+    });
+}
 
-    // Function to initialize the application after CSV is loaded
-    const initializeApp = async () => {
-        try {
-            const hierarchy = await loadCSV(); // Wait for CSV to load
-            populateColumn(hierarchy, 'column1'); // Populate columns with loaded data
-        } catch (error) {
-            console.error('Error loading CSV:', error);
+        function processHTMLContent(content) {
+            // Remove surrounding quotes if present
+            content = content.replace(/^"(.*)"$/, '$1');
+            
+            // Decode HTML entities
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = content;
+            content = textarea.value;
+
+            // Always wrap the content in a div to ensure proper rendering
+            return `<div class="html-content">${content}</div>`;
         }
-    };
 
-    // Execute initialization when DOM content is fully loaded
-    document.addEventListener('DOMContentLoaded', initializeApp);
-    
+
+        // Function to load and parse CSV using Papa Parse
+        const loadCSV = () => {
+            return new Promise((resolve, reject) => {
+                Papa.parse('./data-import/data.csv', {
+                    download: true,
+                    complete: function(results) {
+                        const data = results.data;
+                        const hierarchy = processData(data);
+                        resolve(hierarchy); // Resolve the Promise with processed data
+                    },
+                    error: function(err, file, inputElem, reason) {
+                        reject(reason); // Reject Promise if there's an error
+                    }
+                });
+            });
+        };
+
+        // Function to initialize the application after CSV is loaded
+        const initializeApp = async () => {
+            try {
+                const hierarchy = await loadCSV(); // Wait for CSV to load
+                populateColumn(hierarchy, 'column1'); // Populate columns with loaded data
+            } catch (error) {
+                console.error('Error loading CSV:', error);
+            }
+        };
+
+        // Execute initialization when DOM content is fully loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
         
-       // Process the CSV data into a hierarchical structure
-    const processData = (data) => {
+        // Process the CSV data into a hierarchical structure
+        const processData = (data) => {
     let hierarchy = {};
 
     data.forEach(row => {
-        let [tier1, tier2, tier3, tier4] = row;
+        if (!Array.isArray(row)) return; // Ensure row is an array
+
+        const [tier1, tier2, tier3, tier4] = row; // Safely destructure row
 
         // Treat "empty" or "-" as truly empty
         const isEmpty = (value) => !value || value === "---";
@@ -225,48 +263,48 @@
     return hierarchy;
 };
 
-// Highlight the selected item and its parents
-const highlightRabbitHole = (columnId, item) => {
-    item.classList.add('black-italic');
-    item.classList.remove('grey-regular');
+        // Highlight the selected item and its parents
+        const highlightRabbitHole = (columnId, item) => {
+            item.classList.add('black-italic');
+            item.classList.remove('grey-regular');
 
-    let colNum = parseInt(columnId.charAt(columnId.length - 1));
-    for (let i = colNum - 1; i >= 1; i--) {
-        let prevColumn = document.querySelector(`#column${i}`);
-        let prevItems = prevColumn.querySelectorAll('li');
+            let colNum = parseInt(columnId.charAt(columnId.length - 1));
+            for (let i = colNum - 1; i >= 1; i--) {
+                let prevColumn = document.querySelector(`#column${i}`);
+                let prevItems = prevColumn.querySelectorAll('li');
 
-        prevItems.forEach(prevItem => {
-            if (prevItem.textContent === item.dataset[`tier${i}`]) {
-                prevItem.classList.add('black-italic');
-                prevItem.classList.remove('grey-regular');
+                prevItems.forEach(prevItem => {
+                    if (prevItem.textContent === item.dataset[`tier${i}`]) {
+                        prevItem.classList.add('black-italic');
+                        prevItem.classList.remove('grey-regular');
+                    }
+                });
             }
-        });
-    }
-};
+        };
 
-// Reset all items to their default style
-const resetStyles = () => {
-    document.querySelectorAll('.column li').forEach(li => {
-        li.classList.remove('black-italic', 'black-regular');
-        li.classList.add('grey-regular');
-    });
-};
+        // Reset all items to their default style
+        const resetStyles = () => {
+            document.querySelectorAll('.column li').forEach(li => {
+                li.classList.remove('black-italic', 'black-regular');
+                li.classList.add('grey-regular');
+            });
+        };
 
-// Animate clickable items in a column one by one
-const animateClickableItems = (column) => {
-    const clickableItems = column.querySelectorAll('li.clickable');
-    clickableItems.forEach((item, index) => {
-        setTimeout(() => {
-            item.classList.add('black-regular');
-            setTimeout(() => {
-                item.classList.remove('black-regular');
-            }, 1000); // Animate for 1 second
-        }, index * 200); // Delay each item by 200ms (adjust as needed)
-    });
-};
+        // Animate clickable items in a column one by one
+        const animateClickableItems = (column) => {
+            const clickableItems = column.querySelectorAll('li.clickable');
+            clickableItems.forEach((item, index) => {
+                setTimeout(() => {
+                    item.classList.add('black-regular');
+                    setTimeout(() => {
+                        item.classList.remove('black-regular');
+                    }, 1000); // Animate for 1 second
+                }, index * 200); // Delay each item by 200ms (adjust as needed)
+            });
+        };
 
-// Function to split text into lines based on a maximum character count
-const splitIntoLines = (text, maxChars = 50) => {
+        // Function to split text into lines based on a maximum character count
+        const splitIntoLines = (text, maxChars = 50) => {
             const words = text.split(' ');
             let lines = [];
             let currentLine = '';
@@ -301,8 +339,8 @@ const splitIntoLines = (text, maxChars = 50) => {
             });
         };
 
-        // Modify the populateColumn function
-        const populateColumn = (data, columnId, parentItem = {}) => {
+       // Modify the populateColumn function
+       const populateColumn = (data, columnId, parentItem = {}) => {
             const column = document.querySelector(`#${columnId}`);
             column.innerHTML = '';
 
@@ -344,6 +382,8 @@ const splitIntoLines = (text, maxChars = 50) => {
 
                 if (columnId === 'column4') {
                     listItem.classList.add('black-regular', 'no-hover');
+                    // Directly set innerHTML for the last column to render HTML
+                    listItem.innerHTML = item;
                 }
 
                 column.appendChild(listItem);
@@ -360,45 +400,43 @@ const splitIntoLines = (text, maxChars = 50) => {
             }
         };
 
-// Handle horizontal scrolling
-function transformScroll(event) {
-    if (!event.deltaY) {
-        return;
-    }
+        // Handle horizontal scrolling
+        function transformScroll(event) {
+            if (!event.deltaY) {
+                return;
+            }
 
-    const container = document.querySelector('.container');
-    const lastColumn = document.querySelector('#column4');
-    const rect = lastColumn.getBoundingClientRect();
-    const isOverLastColumn = 
-        event.clientX > rect.left &&
-        event.clientX < rect.right &&
-        event.clientY > rect.top &&
-        event.clientY < rect.bottom;
+            const container = document.querySelector('.container');
+            const lastColumn = document.querySelector('#column4');
+            const rect = lastColumn.getBoundingClientRect();
+            const isOverLastColumn = 
+                event.clientX > rect.left &&
+                event.clientX < rect.right &&
+                event.clientY > rect.top &&
+                event.clientY < rect.bottom;
 
-    if (isOverLastColumn) {
-        // Allow default vertical scrolling for the last column
-        return;
-    }
+            if (isOverLastColumn) {
+                // Allow default vertical scrolling for the last column
+                return;
+            }
 
-    event.preventDefault();
-    const scrollAmount = event.deltaY * 2;
-    container.scrollLeft += scrollAmount;
-}
+            event.preventDefault();
+            const scrollAmount = event.deltaY * 2;
+            container.scrollLeft += scrollAmount;
+        }
 
-const container = document.querySelector('.container');
-container.addEventListener('wheel', transformScroll, { passive: false });
+        const container = document.querySelector('.container');
+        container.addEventListener('wheel', transformScroll, { passive: false });
 
-// Parse the CSV file and initialize the columns
-Papa.parse('/data-import/data.csv', {
-    download: true,
-    complete: function(results) {
-        const data = results.data;
-        const hierarchy = processData(data);
-        populateColumn(hierarchy, 'column1');
-    }
-});
-    
-        
+        // Parse the CSV file and initialize the columns
+        Papa.parse('/data-import/data.csv', {
+            download: true,
+            complete: function(results) {
+                const data = parseCSVWithHTML(results.data.map(row => row.join(',')).join('\n'));
+                const hierarchy = processData(data);
+                populateColumn(hierarchy, 'column1');
+            }
+        });
     </script>
 </body>
 </html>
