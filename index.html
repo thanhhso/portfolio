@@ -380,34 +380,7 @@ const initializeApp = async () => {
 // Execute initialization when DOM content is fully loaded
 document.addEventListener('DOMContentLoaded', initializeApp);
         
-        // Process the CSV data into a hierarchical structure
-        const processData = (data) => {
-    let hierarchy = {};
-
-    data.forEach(row => {
-        if (!Array.isArray(row)) return; // Ensure row is an array
-
-        const [tier1, tier2, tier3, tier4] = row; // Safely destructure row
-
-        // Treat "empty" or "-" as truly empty
-        const isEmpty = (value) => !value || value === "---";
-
-        if (!isEmpty(tier1)) {
-            if (!hierarchy[tier1]) hierarchy[tier1] = {};
-            if (!isEmpty(tier2)) {
-                if (!hierarchy[tier1][tier2]) hierarchy[tier1][tier2] = {};
-                if (!isEmpty(tier3)) {
-                    if (!hierarchy[tier1][tier2][tier3]) hierarchy[tier1][tier2][tier3] = {};
-                    if (!isEmpty(tier4)) {
-                        hierarchy[tier1][tier2][tier3][tier4] = {};
-                    }
-                }
-            }
-        }
-    });
-
-    return hierarchy;
-};
+        
 
         // Highlight the selected item and its parents
         const highlightRabbitHole = (columnId, item) => {
